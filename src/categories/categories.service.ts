@@ -1,0 +1,88 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+
+@Injectable()
+export class CategoriesService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll() {
+    return this.prisma.category.findMany({
+      where: { is_active: true },
+      include: {
+        children: {
+          where: { is_active: true },
+          select: { id: true, name: true, slug: true, icon_url: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async findOne(id: bigint) {
+    const category = await this.prisma.category.findFirst({
+      where: { id, is_active: true },
+      include: {
+        parent: {
+          select: { id: true, name: true, slug: true },
+        },
+        children: {
+          where: { is_active: true },
+          select: { id: true, name: true, slug: true, icon_url: true },
+        },
+        desserts: {
+          where: { is_active: true },
+          select: { id: true, name: true, slug: true, price: true, image_url: true },
+        },
+      },
+    });
+
+    if (!category) throw new NotFoundException('Category not found');
+    return category;
+  }
+
+  async create(dto: CreateCategoryDto) {
+    const slug = dto.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+
+    return this.prisma.category.create({
+      data: {
+        name: dto.name,
+        slug,
+        description: dto.description,
+        icon_url: dto.icon_url,
+        ...(dto.parent_id && { parent_id: BigInt(dto.parent_id) }),
+      },
+    });
+  }
+
+  async update(id: bigint, dto: UpdateCategoryDto) {
+    await this.findOne(id);
+
+    const data: any = { ...dto };
+    if (dto.parent_id) data.parent_id = BigInt(dto.parent_id);
+    if (dto.name) {
+      data.slug = dto.name
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+    }
+
+    return this.prisma.category.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async remove(id: bigint) {
+    await this.findOne(id);
+
+    return this.prisma.category.update({
+      where: { id },
+      data: { is_active: false },
+    });
+  }
+}
