@@ -49,10 +49,16 @@ export class DessertsService {
     return dessert;
   }
 
-  async create(sellerId: bigint, req: any, dto: CreateDessertDto, file?: Express.Multer.File) {
+async create(
+  sellerId: bigint,
+  req: any,
+  dto: CreateDessertDto,
+  file?: Express.Multer.File,
+) {
+  try {
     let image_url: string | undefined;
+
     if (file) {
-        console.log(file);
       image_url = this.uploadService.getFileUrl(req, file.filename);
     }
 
@@ -61,7 +67,7 @@ export class DessertsService {
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
 
-    return this.prisma.dessert.create({
+    return await this.prisma.dessert.create({
       data: {
         category_id: BigInt(dto.category_id),
         seller_id: sellerId,
@@ -72,7 +78,11 @@ export class DessertsService {
         image_url,
       },
     });
+  } catch (error) {
+    console.error('ERROR CREATE DESSERT:', error);
+    throw error;
   }
+}
 
   async update(id: bigint, sellerId: bigint, role: string, req: any, dto: UpdateDessertDto, file?: Express.Multer.File) {
     const dessert = await this.findOne(id);
