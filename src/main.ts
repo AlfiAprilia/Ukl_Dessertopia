@@ -10,7 +10,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.enableCors({
-    origin: 'https://ukldessertopia-production.up.railway.app', // atau ganti dengan URL frontend spesifik
+    origin: '*', // atau ganti dengan URL frontend spesifik
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
