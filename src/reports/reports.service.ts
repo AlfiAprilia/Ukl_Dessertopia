@@ -1,76 +1,116 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateReportDto } from './dto/create-report.dto';
-import { UpdateReportDto } from './dto/update-report.dto';
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+  ) {}
 
-  // GET semua report — admin only
-  async findAll() {
+  async getSellerReports(sellerId: bigint) {
     return this.prisma.report.findMany({
-      include: {
-        reporter: { select: { id: true, name: true } },
+      where: {
+        seller_id: sellerId,
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: {
+        report_date: 'desc',
+      },
     });
   }
 
-  // GET detail satu report — admin only
-  async findOne(id: bigint) {
+  async getReportDetail(id: bigint) {
     const report = await this.prisma.report.findUnique({
       where: { id },
-      include: {
-        reporter: { select: { id: true, name: true } },
-      },
     });
 
-    if (!report) throw new NotFoundException('Report not found');
+    if (!report) {
+      throw new NotFoundException(
+        'Report not found',
+      );
+    }
+
     return report;
   }
 
-  // GET report milik user sendiri
-  async findMyReports(userId: bigint) {
-    return this.prisma.report.findMany({
-      where: { reporter_id: userId },
-      orderBy: { created_at: 'desc' },
-    });
-  }
+  async generateDailyReport(
+    sellerId: bigint,
+    date: Date,
+  ) {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
 
-  // POST buat report baru — user
-  async create(userId: bigint, dto: CreateReportDto) {
-    // Cek sudah pernah report target yang sama
-    const existing = await this.prisma.report.findFirst({
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+
+    const orderItems =
+      await this.prisma.orderItem.findMany({
+        where: {
+          dessert: {
+            seller_id: sellerId,
+          },
+          order: {
+            created_at: {
+              gte: start,
+              lte: end,
+            },
+            status: 'completed',
+          },
+        },
+        include: {
+          order: true,
+        },
+      });
+
+    const totalOrders =
+      new Set(
+        orderItems.map((i) => i.order_id.toString()),
+      ).size;
+
+    const totalCustomers =
+      new Set(
+        orderItems.map((i) =>
+          i.order.user_id.toString(),
+        ),
+      ).size;
+
+    const totalItemsSold =
+      orderItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+
+    const totalRevenue =
+      orderItems.reduce(
+        (sum, item) =>
+          sum + Number(item.subtotal),
+        0,
+      );
+
+    return this.prisma.report.upsert({
       where: {
-        reporter_id: userId,
-        target_type: dto.target_type,
-        target_id: BigInt(dto.target_id),
+        seller_id_report_date: {
+          seller_id: sellerId,
+          report_date: start,
+        },
       },
-    });
-    if (existing) throw new ConflictException('Kamu sudah pernah melaporkan ini');
-
-    return this.prisma.report.create({
-      data: {
-        reporter_id: userId,
-        target_type: dto.target_type,
-        target_id: BigInt(dto.target_id),
-        reason: dto.reason,
+      update: {
+        total_orders: totalOrders,
+        total_customers: totalCustomers,
+        total_items_sold: totalItemsSold,
+        total_revenue: totalRevenue,
       },
-    });
-  }
-
-  // PATCH update status report — admin only
-  async update(id: bigint, dto: UpdateReportDto) {
-    await this.findOne(id);
-
-    return this.prisma.report.update({
-      where: { id },
-      data: { ...dto },
+      create: {
+        seller_id: sellerId,
+        report_date: start,
+        total_orders: totalOrders,
+        total_customers: totalCustomers,
+        total_items_sold: totalItemsSold,
+        total_revenue: totalRevenue,
+      },
     });
   }
 }
