@@ -9,6 +9,13 @@ import { existsSync, mkdirSync } from 'fs';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.enableCors({
+    origin: 'http://localhost:3000', // atau ganti dengan URL frontend spesifik
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   // ✅ Fix BigInt serialization
   (BigInt.prototype as any).toJSON = function () {
     return this.toString();
