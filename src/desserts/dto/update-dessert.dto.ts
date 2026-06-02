@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsNumber, IsPositive, IsBoolean, MaxLength } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateDessertDto {
@@ -31,6 +31,7 @@ export class UpdateDessertDto {
   @ApiProperty({ example: true, required: false })
   @IsOptional()
   @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
   is_active?: boolean;
 
   @ApiProperty({ type: 'string', format: 'binary', required: false })
