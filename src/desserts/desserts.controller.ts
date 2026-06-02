@@ -66,7 +66,17 @@ export class DessertsController {
     @Body() dto: CreateDessertDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.dessertsService.create(req.user.id, req, dto, file);
+    try {
+        return this.dessertsService.create(
+        BigInt(req.user.id),
+         req,
+         dto,
+        file
+    );
+    } catch (error) {
+        console.error(error);
+        throw error;
+    }
   }
 
   @Patch(':id')

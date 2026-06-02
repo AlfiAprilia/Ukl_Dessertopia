@@ -52,6 +52,7 @@ export class DessertsService {
   async create(sellerId: bigint, req: any, dto: CreateDessertDto, file?: Express.Multer.File) {
     let image_url: string | undefined;
     if (file) {
+        console.log(file);
       image_url = this.uploadService.getFileUrl(req, file.filename);
     }
 
