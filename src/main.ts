@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -13,8 +14,14 @@ async function bootstrap() {
     return this.toString();
   };
 
-  // ✅ Serve static files dari folder uploads
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  // ✅ Buat folder uploads jika belum ada
+  const uploadsDir = join(process.cwd(), 'uploads');
+  if (!existsSync(uploadsDir)) {
+    mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // ✅ Serve static files
+  app.useStaticAssets(uploadsDir, {
     prefix: '/uploads',
   });
 
