@@ -50,7 +50,7 @@ export class DessertsService {
   }
 
   async create(sellerId: bigint, req: any, dto: CreateDessertDto, file?: Express.Multer.File) {
-    let image_url = dto.image_url;
+    let image_url: string | undefined;
     if (file) {
       image_url = this.uploadService.getFileUrl(req, file.filename);
     }
@@ -80,7 +80,7 @@ export class DessertsService {
       throw new ForbiddenException('Bukan dessert milikmu');
     }
 
-    let image_url = dto.image_url;
+    let image_url : string | undefined;
     if (file) {
       image_url = this.uploadService.getFileUrl(req, file.filename);
     }
