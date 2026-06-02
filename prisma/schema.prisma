@@ -7,6 +7,148 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Auth {
+  id         BigInt   @id @default(autoincrement())
+  email      String   @unique
+  password   String
+  role       UserRole @default(user)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       User?
+
+  @@map("auth")
+}
+
+model User {
+  id            BigInt    @id @default(autoincrement())
+  auth_id       BigInt    @unique
+  name          String
+  avatar_url    String?
+  bio           String?
+  phone         String?
+  address       String?
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  desserts      Dessert[] @relation("SellerDessert")
+  orders        Order[]
+  sales_reports Report[]
+  reviews       Review[]
+  auth          Auth      @relation(fields: [auth_id], references: [id])
+
+  @@map("users")
+}
+
+model Category {
+  id          BigInt     @id @default(autoincrement())
+  name        String
+  slug        String     @unique
+  description String?
+  parent_id   BigInt?
+  icon_url    String?
+  is_active   Boolean    @default(true)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+  parent      Category?  @relation("CategoryToCategory", fields: [parent_id], references: [id])
+  children    Category[] @relation("CategoryToCategory")
+  desserts    Dessert[]
+
+  @@index([parent_id], map: "categories_parent_id_fkey")
+  @@map("categories")
+}
+
+model Dessert {
+  id             BigInt      @id @default(autoincrement())
+  category_id    BigInt
+  seller_id      BigInt?
+  name           String
+  slug           String      @unique
+  description    String?
+  price          Decimal?    @db.Decimal(15, 2)
+  image_url      String?
+  average_rating Decimal     @default(0.00) @db.Decimal(3, 2)
+  review_count   Int         @default(0)
+  is_active      Boolean     @default(true)
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  category       Category    @relation(fields: [category_id], references: [id])
+  seller         User?       @relation("SellerDessert", fields: [seller_id], references: [id])
+  order_items    OrderItem[]
+  reviews        Review[]
+
+  @@index([category_id], map: "desserts_category_id_fkey")
+  @@index([seller_id], map: "desserts_seller_id_fkey")
+  @@map("desserts")
+}
+
+model Review {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt
+  dessert_id BigInt
+  rating     Int
+  comment    String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  dessert    Dessert  @relation(fields: [dessert_id], references: [id])
+  user       User     @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, dessert_id])
+  @@index([dessert_id], map: "reviews_dessert_id_fkey")
+  @@map("reviews")
+}
+
+model Order {
+  id               BigInt         @id @default(autoincrement())
+  user_id          BigInt
+  order_code       String         @unique
+  status           OrderStatus    @default(pending)
+  total_amount     Decimal        @db.Decimal(15, 2)
+  payment_method   PaymentMethod?
+  payment_status   PaymentStatus  @default(unpaid)
+  shipping_address String?
+  notes            String?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  order_items      OrderItem[]
+  user             User           @relation(fields: [user_id], references: [id])
+
+  @@index([user_id], map: "orders_user_id_fkey")
+  @@map("orders")
+}
+
+model OrderItem {
+  id         BigInt   @id @default(autoincrement())
+  order_id   BigInt
+  dessert_id BigInt
+  quantity   Int      @default(1)
+  price      Decimal  @db.Decimal(15, 2)
+  subtotal   Decimal  @db.Decimal(15, 2)
+  created_at DateTime @default(now())
+  dessert    Dessert  @relation(fields: [dessert_id], references: [id])
+  order      Order    @relation(fields: [order_id], references: [id])
+
+  @@unique([order_id, dessert_id])
+  @@index([dessert_id], map: "order_items_dessert_id_fkey")
+  @@map("order_items")
+}
+
+model Report {
+  id               BigInt   @id @default(autoincrement())
+  seller_id        BigInt
+  report_date      DateTime
+  total_orders     Int      @default(0)
+  total_customers  Int      @default(0)
+  total_items_sold Int      @default(0)
+  total_revenue    Decimal  @default(0.00) @db.Decimal(15, 2)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  seller           User     @relation(fields: [seller_id], references: [id])
+
+  @@unique([seller_id, report_date])
+  @@map("reports")
+}
+
 enum UserRole {
   user
   admin
@@ -31,139 +173,4 @@ enum PaymentStatus {
   paid
   failed
   refund
-}
-
-model Auth {
-  id         BigInt   @id @default(autoincrement())
-  email      String   @unique
-  password   String
-  role       UserRole @default(user)
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User?
-
-  @@map("auth")
-}
-
-model User {
-  id         BigInt   @id @default(autoincrement())
-  auth_id    BigInt   @unique
-  name       String
-  avatar_url String?
-  bio        String?
-  phone      String?
-  address    String?
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  auth       Auth     @relation(fields: [auth_id], references: [id])
-  reviews    Review[]
-  orders     Order[]
-  sales_reports    Report[]
-  desserts   Dessert[] @relation("SellerDessert")
-
-  @@map("users")
-}
-
-model Category {
-  id          BigInt     @id @default(autoincrement())
-  name        String
-  slug        String     @unique
-  description String?
-  parent_id   BigInt?
-  icon_url    String?
-  is_active   Boolean    @default(true)
-  created_at  DateTime   @default(now())
-  updated_at  DateTime   @updatedAt
-  parent      Category?  @relation("CategoryToCategory", fields: [parent_id], references: [id])
-  children    Category[] @relation("CategoryToCategory")
-  desserts    Dessert[]
-
-  @@map("categories")
-}
-
-model Dessert {
-  id             BigInt      @id @default(autoincrement())
-  category_id    BigInt
-  seller_id      BigInt?
-  name           String
-  slug           String      @unique
-  description    String?
-  price          Decimal?    @db.Decimal(15, 2)
-  image_url      String?
-  average_rating Decimal     @default(0.00) @db.Decimal(3, 2)
-  review_count   Int         @default(0)
-  is_active      Boolean     @default(true)
-  created_at     DateTime    @default(now())
-  updated_at     DateTime    @updatedAt
-  category       Category    @relation(fields: [category_id], references: [id])
-  seller         User?       @relation("SellerDessert", fields: [seller_id], references: [id])
-  reviews        Review[]
-  order_items    OrderItem[]
-
-  @@map("desserts")
-}
-
-model Review {
-  id         BigInt   @id @default(autoincrement())
-  user_id    BigInt
-  dessert_id BigInt
-  rating     Int
-  comment    String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  user       User     @relation(fields: [user_id], references: [id])
-  dessert    Dessert  @relation(fields: [dessert_id], references: [id])
-
-  @@unique([user_id, dessert_id])
-  @@map("reviews")
-}
-
-model Order {
-  id               BigInt         @id @default(autoincrement())
-  user_id          BigInt
-  order_code       String         @unique
-  status           OrderStatus    @default(pending)
-  total_amount     Decimal        @db.Decimal(15, 2)
-  payment_method   PaymentMethod?
-  payment_status   PaymentStatus  @default(unpaid)
-  shipping_address String?
-  notes            String?
-  created_at       DateTime       @default(now())
-  updated_at       DateTime       @updatedAt
-  user             User           @relation(fields: [user_id], references: [id])
-  order_items      OrderItem[]
-
-  @@map("orders")
-}
-
-model OrderItem {
-  id         BigInt   @id @default(autoincrement())
-  order_id   BigInt
-  dessert_id BigInt
-  quantity   Int      @default(1)
-  price      Decimal  @db.Decimal(15, 2)
-  subtotal   Decimal  @db.Decimal(15, 2)
-  created_at DateTime @default(now())
-  order      Order    @relation(fields: [order_id], references: [id])
-  dessert    Dessert  @relation(fields: [dessert_id], references: [id])
-
-  @@unique([order_id, dessert_id])
-  @@map("order_items")
-}
-
-model Report {
-  id                 BigInt   @id @default(autoincrement())
-  seller_id          BigInt
-  report_date        DateTime
-  total_orders       Int      @default(0)
-  total_customers    Int      @default(0)
-  total_items_sold   Int      @default(0)
-  total_revenue      Decimal  @default(0.00) @db.Decimal(15,2)
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
-  seller             User     @relation(fields: [seller_id], references: [id])
-  @@unique([seller_id, report_date])
-  @@map("reports")
 }
