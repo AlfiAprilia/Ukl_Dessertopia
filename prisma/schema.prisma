@@ -22,9 +22,8 @@ enum OrderStatus {
 }
 
 enum PaymentMethod {
-  bank_transfer
-  e_wallet
-  cod
+  tunai
+  kartu_kredit
 }
 
 enum PaymentStatus {
