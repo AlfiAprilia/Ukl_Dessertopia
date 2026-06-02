@@ -75,6 +75,7 @@ model User {
   reviews    Review[]
   orders     Order[]
   reports    Report[]
+  desserts   Dessert[] @relation("SellerDessert")
 
   @@map("users")
 }
@@ -99,6 +100,7 @@ model Category {
 model Dessert {
   id             BigInt      @id @default(autoincrement())
   category_id    BigInt
+  seller_id      BigInt?
   name           String
   slug           String      @unique
   description    String?
@@ -110,6 +112,7 @@ model Dessert {
   created_at     DateTime    @default(now())
   updated_at     DateTime    @updatedAt
   category       Category    @relation(fields: [category_id], references: [id])
+  seller         User?       @relation("SellerDessert", fields: [seller_id], references: [id])
   reviews        Review[]
   order_items    OrderItem[]
 
