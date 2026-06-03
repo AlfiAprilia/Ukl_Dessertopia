@@ -68,25 +68,29 @@ export class CategoriesService {
     });
   }
 
-  async update(id: bigint, req: any, dto: UpdateCategoryDto, file?: Express.Multer.File) {
-    await this.findOne(id);
+async update(id: bigint, req: any, dto: UpdateCategoryDto, file?: Express.Multer.File) {
+  // ← ubah ini, cari tanpa filter is_active
+  const existing = await this.prisma.category.findUnique({
+    where: { id },
+  });
+  if (!existing) throw new NotFoundException('Category not found');
 
-    let icon_url = dto.icon_url;
-    if (file) {
-      icon_url = this.uploadService.getFileUrl(req, file.filename);
-    }
-
-    const data: any = { ...dto, icon_url };
-    if (dto.parent_id) data.parent_id = BigInt(dto.parent_id);
-    if (dto.name) {
-      data.slug = dto.name
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '');
-    }
-
-    return this.prisma.category.update({ where: { id }, data });
+  let icon_url = dto.icon_url;
+  if (file) {
+    icon_url = this.uploadService.getFileUrl(req, file.filename);
   }
+
+  const data: any = { ...dto, icon_url };
+  if (dto.parent_id) data.parent_id = BigInt(dto.parent_id);
+  if (dto.name) {
+    data.slug = dto.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+  }
+
+  return this.prisma.category.update({ where: { id }, data });
+}
 
   async remove(id: bigint) {
     await this.findOne(id);
