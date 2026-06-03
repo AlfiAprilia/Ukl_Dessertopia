@@ -19,6 +19,7 @@ export class UpdateCategoryDto {
   @IsNumber()
   @IsPositive()
   @Type(() => Number)
+  @Transform(({ value }) => value === '' ? undefined : Number(value)) // ← tambah ini
   parent_id?: number;
 
   @ApiProperty({ example: 'https://example.com/icon.png', required: false })
