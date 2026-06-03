@@ -19,7 +19,7 @@ export class UpdateCategoryDto {
   @IsNumber()
   @IsPositive()
   @Type(() => Number)
-  @Transform(({ value }) => value === '' ? undefined : Number(value)) // ← tambah ini
+  @Transform(({ value }) => value === '' || value === null ? undefined : Number(value))
   parent_id?: number;
 
   @ApiProperty({ example: 'https://example.com/icon.png', required: false })
@@ -30,7 +30,7 @@ export class UpdateCategoryDto {
   @ApiProperty({ example: true, required: false })
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => value === 'true' || value === true) // ← tambah ini
+  @Transform(({ value }) => value === 'true' || value === true)
   is_active?: boolean;
 
   @ApiProperty({ type: 'string', format: 'binary', required: false })
