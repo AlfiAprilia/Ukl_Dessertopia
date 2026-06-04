@@ -84,7 +84,7 @@ async create(
   }
 }
 
- async update(id: bigint, sellerId: bigint, role: string, req: any, dto: UpdateDessertDto, file?: Express.Multer.File) {
+async update(id: bigint, sellerId: bigint, role: string, req: any, dto: UpdateDessertDto, file?: Express.Multer.File) {
   const dessert = await this.prisma.dessert.findUnique({ where: { id } });
   if (!dessert) throw new NotFoundException('Dessert not found');
 
@@ -122,4 +122,5 @@ async remove(id: bigint, sellerId: bigint, role: string) {
   return this.prisma.dessert.delete({
     where: { id },
   });
+}
 }
