@@ -84,40 +84,42 @@ async create(
   }
 }
 
-  async update(id: bigint, sellerId: bigint, role: string, req: any, dto: UpdateDessertDto, file?: Express.Multer.File) {
-    const dessert = await this.findOne(id);
+ async update(id: bigint, sellerId: bigint, role: string, req: any, dto: UpdateDessertDto, file?: Express.Multer.File) {
+  const dessert = await this.prisma.dessert.findUnique({ where: { id } });
+  if (!dessert) throw new NotFoundException('Dessert not found');
 
-    if (role !== 'admin' && dessert.seller_id !== sellerId) {
-      throw new ForbiddenException('Bukan dessert milikmu');
-    }
-
-    let image_url : string | undefined;
-    if (file) {
-      image_url = this.uploadService.getFileUrl(req, file.filename);
-    }
-
-    const data: any = { ...dto, image_url };
-    if (dto.category_id) data.category_id = BigInt(dto.category_id!);
-    if (dto.name) {
-      data.slug = dto.name
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '');
-    }
-
-    return this.prisma.dessert.update({ where: { id }, data });
+  if (role !== 'admin' && dessert.seller_id !== sellerId) {
+    throw new ForbiddenException('Bukan dessert milikmu');
   }
 
-  async remove(id: bigint, sellerId: bigint, role: string) {
-    const dessert = await this.findOne(id);
-
-    if (role !== 'admin' && dessert.seller_id !== sellerId) {
-      throw new ForbiddenException('Bukan dessert milikmu');
-    }
-
-    return this.prisma.dessert.update({
-      where: { id },
-      data: { is_active: false },
-    });
+  let image_url: string | undefined;
+  if (file) {
+    image_url = this.uploadService.getFileUrl(req, file.filename);
   }
+
+  const { image, ...rest } = dto;
+  const data: any = { ...rest, ...(image_url && { image_url }) };
+  if (dto.category_id) data.category_id = BigInt(dto.category_id!);
+  if (dto.name) {
+    data.slug = dto.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+  }
+
+  return this.prisma.dessert.update({ where: { id }, data });
+}
+
+async remove(id: bigint, sellerId: bigint, role: string) {
+  const dessert = await this.prisma.dessert.findUnique({ where: { id } });
+  if (!dessert) throw new NotFoundException('Dessert not found');
+
+  if (role !== 'admin' && dessert.seller_id !== sellerId) {
+    throw new ForbiddenException('Bukan dessert milikmu');
+  }
+
+  // Hard delete — benar-benar hapus dari database
+  return this.prisma.dessert.delete({
+    where: { id },
+  });
 }
